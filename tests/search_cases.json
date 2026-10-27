@@ -1,0 +1,37 @@
+{
+  "_comment": "data/messages.json に対する検索テストケース。単体テストと実機テスト（docs/04_test_plan.md）で共用する。kind: exact=1件確定 / candidates=候補提示 / none=該当なし / empty=入力なし",
+  "cases": [
+    {"id": "N-01", "group": "番号検索", "input": "3", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-02", "group": "番号検索", "input": "3番", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-03", "group": "番号検索", "input": "３番", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-04", "group": "番号検索", "input": "三番", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-05", "group": "番号検索", "input": "番号3", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-06", "group": "番号検索", "input": "03", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-07", "group": "番号検索", "input": "3番。", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "N-08", "group": "番号検索", "input": " 7 番目 ", "kind": "exact", "ids": ["msg-0007"]},
+    {"id": "N-09", "group": "番号検索", "input": "99", "kind": "none", "ids": []},
+    {"id": "N-10", "group": "番号検索", "input": "十番", "kind": "none", "ids": []},
+    {"id": "N-11", "group": "番号検索（削除済み）", "input": "9", "kind": "none", "ids": []},
+
+    {"id": "K-01", "group": "キーワード検索", "input": "到着", "kind": "exact", "ids": ["msg-0001"]},
+    {"id": "K-02", "group": "キーワード検索", "input": "到着。", "kind": "exact", "ids": ["msg-0001"]},
+    {"id": "K-03", "group": "キーワード検索", "input": "置き 配", "kind": "exact", "ids": ["msg-0002"]},
+    {"id": "K-04", "group": "キーワード検索", "input": "　オートロック　", "kind": "exact", "ids": ["msg-0005"]},
+    {"id": "K-05", "group": "キーワード検索（長文・絵文字）", "input": "お礼", "kind": "exact", "ids": ["msg-0007"]},
+
+    {"id": "A-01", "group": "別名検索", "input": "とうちゃく", "kind": "exact", "ids": ["msg-0001"]},
+    {"id": "A-02", "group": "別名検索", "input": "遅れます", "kind": "exact", "ids": ["msg-0003"]},
+    {"id": "A-03", "group": "別名検索", "input": "エントランス", "kind": "exact", "ids": ["msg-0005"]},
+    {"id": "A-04", "group": "別名検索", "input": "駐車場", "kind": "exact", "ids": ["msg-0008"]},
+
+    {"id": "P-01", "group": "部分一致（候補提示のみ）", "input": "番号", "kind": "candidates", "ids": ["msg-0004"]},
+    {"id": "P-02", "group": "部分一致（候補提示のみ）", "input": "到着し", "kind": "candidates", "ids": ["msg-0001"]},
+    {"id": "P-03", "group": "部分一致（候補提示のみ）", "input": "駐車", "kind": "exact", "ids": ["msg-0008"]},
+
+    {"id": "U-01", "group": "未登録語句", "input": "ピザ", "kind": "none", "ids": []},
+    {"id": "U-02", "group": "未登録語句", "input": "到", "kind": "none", "ids": []},
+    {"id": "U-03", "group": "未登録語句（削除済み）", "input": "旧到着", "kind": "none", "ids": []},
+    {"id": "U-04", "group": "空入力", "input": "　", "kind": "empty", "ids": []},
+    {"id": "U-05", "group": "空入力", "input": "。", "kind": "empty", "ids": []}
+  ]
+}

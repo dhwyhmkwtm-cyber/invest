@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "haitatsu-message/messages.schema.json",
+  "title": "配達メッセージ データファイル（schemaVersion 1）",
+  "description": "一意性・番号との区別など JSON Schema で表せない規則は tools/haitatsu.py validate で検査する。",
+  "type": "object",
+  "required": ["schemaVersion", "revision", "updatedAt", "messages"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "updatedAt": {"type": "string", "format": "date-time"},
+    "messages": {"type": "array", "items": {"$ref": "#/$defs/message"}}
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^|０-９]+$"
+    },
+    "message": {
+      "type": "object",
+      "required": ["id", "number", "keyword", "aliases", "text", "category", "createdAt", "updatedAt", "deletedAt"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "number": {"type": "integer", "minimum": 1},
+        "keyword": {"allOf": [{"$ref": "#/$defs/key"}, {"pattern": "^[^.]+$"}]},
+        "aliases": {"type": "array", "items": {"$ref": "#/$defs/key"}},
+        "text": {"type": "string", "minLength": 1},
+        "category": {"type": "string"},
+        "createdAt": {"type": "string", "format": "date-time"},
+        "updatedAt": {"type": "string", "format": "date-time"},
+        "deletedAt": {"type": ["string", "null"], "format": "date-time"}
+      }
+    }
+  }
+}
