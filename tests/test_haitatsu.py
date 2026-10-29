@@ -135,13 +135,13 @@ class UserDictionaryTest(unittest.TestCase):
         entries = haitatsu.user_dictionary_entries(self.data)
         active = [m for m in self.data["messages"] if haitatsu.is_active(m)]
         self.assertEqual(len(entries), len(active))
-        self.assertEqual(entries[0], {"phrase": active[0]["text"], "shortcut": "k"})
+        self.assertEqual(entries[0], {"phrase": active[0]["text"], "shortcut": "c"})
         for e in entries:
             self.assertNotIn("\n", e["phrase"])
 
     def test_bad_and_duplicate_yomi_rejected(self):
         data = copy.deepcopy(self.data)
-        data["messages"][1]["yomi"] = "k"
+        data["messages"][1]["yomi"] = "c"
         data["messages"][2]["yomi"] = "カタカナ"
         errors, _ = haitatsu.validate(data)
         self.assertTrue(any("重複" in e for e in errors))
@@ -151,7 +151,7 @@ class UserDictionaryTest(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["messages"][0]["deletedAt"] = "2026-10-29T10:00:00+09:00"
         shortcuts = [e["shortcut"] for e in haitatsu.user_dictionary_entries(data)]
-        self.assertNotIn("k", shortcuts)
+        self.assertNotIn("c", shortcuts)
 
 
 if __name__ == "__main__":
