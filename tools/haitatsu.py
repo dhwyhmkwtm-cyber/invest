@@ -8,6 +8,7 @@ iPhoneショートカット「配達メッセージ」と同じ手順で正規�
   python3 tools/haitatsu.py validate data/messages.json
   python3 tools/haitatsu.py search data/messages.json "3番"
   python3 tools/haitatsu.py list data/messages.json
+  python3 tools/haitatsu.py export-plist data/messages.json dist/user_dictionary.plist
 
 標準ライブラリのみ使用（Python 3.9+）。
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import plistlib
 import re
 import sys
 from dataclasses import dataclass, field
@@ -51,6 +53,10 @@ MESSAGE_FIELDS = {
     "id", "number", "keyword", "aliases", "text", "category",
     "createdAt", "updatedAt", "deletedAt",
 }
+# 任意項目。yomi はユーザ辞書（テキスト置換）の「よみ」。ショートカットの検索には使わない
+OPTIONAL_MESSAGE_FIELDS = {"yomi"}
+# iPhone の日本語キーボードで「よみ」に使える文字（ひらがな・長音・英小文字・数字）
+RE_YOMI = re.compile(r"^[ぁ-ゖー0-9a-z]+$")
 ROOT_FIELDS = {"schemaVersion", "revision", "updatedAt", "messages"}
 
 
@@ -220,6 +226,7 @@ def validate(data) -> tuple[list[str], list[str]]:
         return errors, warnings
 
     seen_ids: set[str] = set()
+    yomi_owner: dict[str, str] = {}
     active_numbers: dict[int, str] = {}
     deleted_numbers: dict[int, str] = {}
     key_owner: dict[str, str] = {}
@@ -233,7 +240,7 @@ def validate(data) -> tuple[list[str], list[str]]:
         missing = MESSAGE_FIELDS - set(m)
         if missing:
             errors.append(f"{where}: 必須項目がありません: {', '.join(sorted(missing))}")
-        for key in sorted(set(m) - MESSAGE_FIELDS):
+        for key in sorted(set(m) - MESSAGE_FIELDS - OPTIONAL_MESSAGE_FIELDS):
             warnings.append(f"{where}: 未定義の項目 {key}")
 
         mid = m.get("id")
@@ -259,6 +266,17 @@ def validate(data) -> tuple[list[str], list[str]]:
 
         if not isinstance(m.get("text"), str) or not m.get("text"):
             errors.append(f"{where}.text: 空でない文字列が必要です")
+        if "yomi" in m:
+            yomi = m["yomi"]
+            if not isinstance(yomi, str) or not RE_YOMI.match(yomi):
+                errors.append(f"{where}.yomi: ひらがな・英小文字・数字のみで指定してください")
+            elif is_active(m):
+                if yomi in yomi_owner:
+                    errors.append(f"{where}.yomi: 「{yomi}」が {yomi_owner[yomi]} と重複しています")
+                else:
+                    yomi_owner[yomi] = str(mid)
+                if "\n" in str(m.get("text", "")):
+                    warnings.append(f"{where}: 本文に改行があります（iPhone のユーザ辞書では改行の扱いが不確実です）")
         if not isinstance(m.get("category"), str):
             errors.append(f"{where}.category: 文字列が必要です")
         for key in ("createdAt", "updatedAt"):
@@ -338,6 +356,31 @@ def cmd_search(args) -> int:
     return 0 if result.kind in ("exact", "candidates") else 2
 
 
+def user_dictionary_entries(data: dict) -> list[dict]:
+    """ユーザ辞書（テキスト置換）用の項目。未削除で yomi があるものだけ、番号順。"""
+    targets = [m for m in data["messages"] if is_active(m) and m.get("yomi")]
+    return [
+        {"phrase": m["text"], "shortcut": m["yomi"]}
+        for m in sorted(targets, key=lambda m: m["number"])
+    ]
+
+
+def cmd_export_plist(args) -> int:
+    data = load_data(args.file)
+    errors, _ = validate(data)
+    if errors:
+        print("データにエラーがあるため出力しません。先に validate を実行してください。")
+        return 1
+    entries = user_dictionary_entries(data)
+    out = Path(args.output)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # macOS「システム設定 > キーボード > ユーザ辞書」の一覧へドラッグして取り込める形式
+    with out.open("wb") as f:
+        plistlib.dump(entries, f)
+    print(f"{len(entries)} 件を {out} に出力しました")
+    return 0
+
+
 def cmd_list(args) -> int:
     for m in load_data(args.file)["messages"]:
         mark = "" if is_active(m) else "（削除済み）"
@@ -358,6 +401,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("list", help="登録内容を一覧表示")
     p.add_argument("file")
     p.set_defaults(func=cmd_list)
+    p = sub.add_parser("export-plist", help="Mac のユーザ辞書に取り込む plist を出力")
+    p.add_argument("file")
+    p.add_argument("output")
+    p.set_defaults(func=cmd_export_plist)
     args = parser.parse_args(argv)
     return args.func(args)
 

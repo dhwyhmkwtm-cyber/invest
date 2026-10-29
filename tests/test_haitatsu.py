@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import haitatsu  # noqa: E402
 
-DATA = haitatsu.load_data(ROOT / "data" / "messages.json")
+DATA = haitatsu.load_data(ROOT / "tests" / "fixtures" / "sample_messages.json")
 CASES = json.loads((ROOT / "tests" / "search_cases.json").read_text(encoding="utf-8"))["cases"]
 
 
@@ -120,6 +120,38 @@ class ValidateTest(unittest.TestCase):
         self.assertTrue(any("必須項目" in e for e in errors))
         self.assertTrue(any("deletedAt" in e for e in errors))
         self.assertTrue(any("revision" in e for e in errors))
+
+
+class UserDictionaryTest(unittest.TestCase):
+    def setUp(self):
+        self.data = haitatsu.load_data(ROOT / "data" / "messages.json")
+
+    def test_delivery_data_is_valid(self):
+        errors, warnings = haitatsu.validate(self.data)
+        self.assertEqual(errors, [])
+        self.assertEqual(warnings, [])
+
+    def test_entries_are_single_line_and_cover_all_active(self):
+        entries = haitatsu.user_dictionary_entries(self.data)
+        active = [m for m in self.data["messages"] if haitatsu.is_active(m)]
+        self.assertEqual(len(entries), len(active))
+        self.assertEqual(entries[0], {"phrase": active[0]["text"], "shortcut": "k"})
+        for e in entries:
+            self.assertNotIn("\n", e["phrase"])
+
+    def test_bad_and_duplicate_yomi_rejected(self):
+        data = copy.deepcopy(self.data)
+        data["messages"][1]["yomi"] = "k"
+        data["messages"][2]["yomi"] = "カタカナ"
+        errors, _ = haitatsu.validate(data)
+        self.assertTrue(any("重複" in e for e in errors))
+        self.assertTrue(any("ひらがな" in e for e in errors))
+
+    def test_deleted_entries_are_not_exported(self):
+        data = copy.deepcopy(self.data)
+        data["messages"][0]["deletedAt"] = "2026-10-29T10:00:00+09:00"
+        shortcuts = [e["shortcut"] for e in haitatsu.user_dictionary_entries(data)]
+        self.assertNotIn("k", shortcuts)
 
 
 if __name__ == "__main__":

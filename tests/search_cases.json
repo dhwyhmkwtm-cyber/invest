@@ -1,5 +1,5 @@
 {
-  "_comment": "data/messages.json に対する検索テストケース。単体テストと実機テスト（docs/04_test_plan.md）で共用する。kind: exact=1件確定 / candidates=候補提示 / none=該当なし / empty=入力なし",
+  "_comment": "tests/fixtures/sample_messages.json に対する検索テストケース。単体テストと実機テスト（docs/04_test_plan.md）で共用する。kind: exact=1件確定 / candidates=候補提示 / none=該当なし / empty=入力なし",
   "cases": [
     {"id": "N-01", "group": "番号検索", "input": "3", "kind": "exact", "ids": ["msg-0003"]},
     {"id": "N-02", "group": "番号検索", "input": "3番", "kind": "exact", "ids": ["msg-0003"]},

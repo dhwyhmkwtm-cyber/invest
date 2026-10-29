@@ -25,6 +25,7 @@
         "number": {"type": "integer", "minimum": 1},
         "keyword": {"allOf": [{"$ref": "#/$defs/key"}, {"pattern": "^[^.]+$"}]},
         "aliases": {"type": "array", "items": {"$ref": "#/$defs/key"}},
+        "yomi": {"type": "string", "pattern": "^[ぁ-ゖー0-9a-z]+$", "description": "任意。ユーザ辞書のよみ"},
         "text": {"type": "string", "minLength": 1},
         "category": {"type": "string"},
         "createdAt": {"type": "string", "format": "date-time"},

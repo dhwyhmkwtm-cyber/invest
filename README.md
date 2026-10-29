@@ -19,7 +19,10 @@ iPhone 標準の Siri・ショートカット・ファイルアプリだけで�
 | `docs/03_build_guide.md` | iPhone でのショートカット作成・導入手順（アクション単位） |
 | `docs/04_test_plan.md` | 実機テスト手順とチェック表 |
 | `docs/05_open_issues.md` | 未解決の制約・要確認事項・機能別ステータス |
-| `data/messages.json` | サンプル定型文データ（9件、うち1件は削除済み） |
+| `docs/06_user_dictionary.md` | 配達用定型文の一覧とユーザ辞書の一括登録手順 |
+| `data/messages.json` | 配達用定型文データ（32件。ユーザ辞書の「よみ」付き） |
+| `dist/user_dictionary.plist` | Mac のユーザ辞書へドラッグして一括登録するファイル |
+| `tests/fixtures/sample_messages.json` | テスト用サンプルデータ（実機テストでも使用） |
 | `data/messages.schema.json` | データの JSON Schema |
 | `shortcut/normalize_map.json` | ショートカットに貼り付ける正規化表（全角数字・漢数字） |
 | `tools/haitatsu.py` | 参照実装（ショートカットと同じ検索手順の再現・データ検証） |
@@ -30,6 +33,7 @@ iPhone 標準の Siri・ショートカット・ファイルアプリだけで�
 ```sh
 python3 tools/haitatsu.py validate data/messages.json   # データ検証
 python3 tools/haitatsu.py search data/messages.json "三番"  # 検索の再現
+python3 tools/haitatsu.py export-plist data/messages.json dist/user_dictionary.plist  # ユーザ辞書用ファイル
 python3 -m unittest discover -s tests -v                 # 単体テスト
 ```
 

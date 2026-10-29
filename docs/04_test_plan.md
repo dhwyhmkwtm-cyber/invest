@@ -2,10 +2,10 @@
 
 ## 準備
 
-- `data/messages.json`（サンプル）を `03_build_guide.md` 0-1 の場所に配置する。
+- テスト用データ `tests/fixtures/sample_messages.json` を `messages.json` という名前で `03_build_guide.md` 0-1 の場所に配置する（本番データ `data/messages.json` とは別。テスト後に本番データへ戻す）。
 - テスト前にメモアプリ等に「テスト前」と入力してコピーしておく（クリップボード不変の確認用）。
 - 記録欄: ☐ を **OK / NG / 保留** に書き換え、NG の場合は手順番号（例 E-6e）と画面の状態を記録する。
-- 期待結果は参照実装の出力と一致する（`python3 tools/haitatsu.py search data/messages.json "<入力>"`）。
+- 期待結果は参照実装の出力と一致する（`python3 tools/haitatsu.py search tests/fixtures/sample_messages.json "<入力>"`）。
 
 ## 1. 検索ロジック（キーボード入力）
 
