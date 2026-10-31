@@ -194,5 +194,23 @@
 		<key>shortcut</key>
 		<string>よい</string>
 	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>大変長らくお待たせいたしました。商品を玄関先に置きました。お届けにお時間がかかってしまい、申し訳ございませんでした。このたびはご注文ありがとうございました。</string>
+		<key>shortcut</key>
+		<string>んお</string>
+	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>大変お待たせいたしました。商品を玄関先に置きました。このたびはご注文ありがとうございました。</string>
+		<key>shortcut</key>
+		<string>んま</string>
+	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>お届けが遅くなり、大変申し訳ございませんでした。ご指定の玄関先に商品を置きました。このたびはご注文いただき、ありがとうございました。</string>
+		<key>shortcut</key>
+		<string>んわ</string>
+	</dict>
 </array>
 </plist>

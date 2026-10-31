@@ -20,7 +20,7 @@ iPhone 標準の Siri・ショートカット・ファイルアプリだけで�
 | `docs/04_test_plan.md` | 実機テスト手順とチェック表 |
 | `docs/05_open_issues.md` | 未解決の制約・要確認事項・機能別ステータス |
 | `docs/06_user_dictionary.md` | 配達用定型文の一覧とユーザ辞書の一括登録手順 |
-| `data/messages.json` | 配達用定型文データ（32件。ユーザ辞書の「よみ」付き） |
+| `data/messages.json` | 配達用定型文データ（35件。ユーザ辞書の「よみ」付き） |
 | `dist/user_dictionary.plist` | Mac のユーザ辞書へドラッグして一括登録するファイル |
 | `tests/fixtures/sample_messages.json` | テスト用サンプルデータ（実機テストでも使用） |
 | `data/messages.schema.json` | データの JSON Schema |
