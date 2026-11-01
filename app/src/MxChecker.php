@@ -12,7 +12,8 @@ class MxChecker
     /** @var array<string,bool> */
     private array $cache = [];
 
-    public function __construct(private Db $db, private Clock $clock)
+    /** @param bool $localMode true なら .example / .test / .invalid などのテスト用ドメインを「受信可能」とみなす */
+    public function __construct(private Db $db, private Clock $clock, private bool $localMode = false)
     {
     }
 
@@ -27,6 +28,9 @@ class MxChecker
 
     protected function lookup(string $domain): bool
     {
+        if (preg_match('/\.(example|test|invalid|localhost)$/', $domain) || $domain === 'simulator.amazonses.com' && $this->localMode) {
+            return $this->localMode;
+        }
         $ascii = function_exists('idn_to_ascii') ? (idn_to_ascii($domain) ?: $domain) : $domain;
         if (@checkdnsrr($ascii . '.', 'MX')) {
             // "Null MX" (RFC 7505: MX 0 .) はメール不可

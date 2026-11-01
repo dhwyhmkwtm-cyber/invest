@@ -99,6 +99,72 @@ switch ($page) {
         }
         $redirect('p=dashboard');
 
+    // ---------- (ローカルモード) cron を今すぐ実行 ----------
+    case 'runcron':
+        if ($isPost && Mailer\Local\LocalMailbox::isLocal($app)) {
+            $out = (new Mailer\Cron($app))->run();
+            $w = $out['worker'] ?? [];
+            $addFlash('ok', sprintf('cron を1回実行しました: 送信 %d / 再送待ち %d / 失敗 %d / 取消 %d / SESイベント %d件%s',
+                $w['sent'] ?? 0, $w['retry'] ?? 0, $w['failed'] ?? 0, $w['skipped'] ?? 0, $out['local_events'] ?? 0,
+                !empty($w['note']) ? ' (' . $w['note'] . ')' : ''));
+        }
+        $redirect((string)($_POST['back'] ?? 'p=dashboard'));
+
+    // ---------- (ローカルモード) テスト受信箱 ----------
+    case 'mailbox':
+        if (!Mailer\Local\LocalMailbox::isLocal($app)) {
+            $redirect('p=dashboard');
+        }
+        $box = new Mailer\Local\LocalMailbox($app);
+        $mid = (int)($_GET['id'] ?? 0);
+        if ($isPost && $mid) {
+            $m = $db->one('SELECT * FROM local_mailbox WHERE id = ?', [$mid]);
+            $act = (string)($_POST['act'] ?? '');
+            if ($m && in_array($act, ['Open', 'Click', 'Complaint', 'Bounce'], true)) {
+                $res = $box->emit($act, $m['message_id'], $m['to_email']);
+                $labels = ['Open' => '開封', 'Click' => 'リンクのクリック', 'Complaint' => '迷惑メール報告', 'Bounce' => 'バウンス (宛先不明)'];
+                $addFlash('ok', "受信者の「{$labels[$act]}」を模擬しました ({$res})");
+            }
+            $redirect('p=mailbox&id=' . $mid);
+        }
+        if ($mid) {
+            $m = $db->one('SELECT * FROM local_mailbox WHERE id = ?', [$mid]) ?? $redirect('p=mailbox');
+            $mail = Mailer\Local\LocalMailbox::parse($m['raw']);
+            $unsub = preg_match('/^List-Unsubscribe:\s*<([^>]+)>/mi', $m['raw'], $um) ? $um[1] : null;
+            $q = $unsub ? parse_url($unsub) : null;
+            parse_str((string)($q['query'] ?? ''), $qs);
+            $buttons = '';
+            if ($m['is_campaign']) {
+                foreach (['Open' => '開封したことにする', 'Click' => '本文のリンクをクリックしたことにする', 'Complaint' => '「迷惑メール」ボタンを押したことにする', 'Bounce' => 'バウンスさせる'] as $act => $label) {
+                    $buttons .= '<form method="post" class="inline">' . $csrfField() . '<input type="hidden" name="act" value="' . $act . '"><button class="' . ($act === 'Complaint' || $act === 'Bounce' ? 'danger ' : '') . 'small">' . $label . '</button></form> ';
+                }
+                if ($unsub) {
+                    // Gmail 等の「配信停止」ボタンと同じリクエスト (RFC 8058)
+                    $buttons .= '<form method="post" action="../u.php?q=' . (int)($qs['q'] ?? 0) . '&t=' . $h($qs['t'] ?? '') . '" class="inline">'
+                        . '<input type="hidden" name="List-Unsubscribe" value="One-Click"><button class="danger small">メールソフトの「配信停止」ボタンを押す</button></form>';
+                }
+            }
+            $text = $h($mail['text']);
+            // 本文中のURLはリンクにする (配信停止URLはローカルの配信停止ページを開く)
+            $text = preg_replace('#(https?://[^\s<]+)#', '<a href="$1" target="_blank" rel="noopener">$1</a>', $text) ?? $text;
+            $body = '<p><a href="?p=mailbox">← テスト受信箱</a></p>'
+                . '<div class="card"><p>' . $buttons . '</p><p class="muted">ボタンを押すと、本物の SES から届くのと同じ形の通知が発生し、抑止リスト・レポート・自動停止に反映されます。</p></div>'
+                . '<h2>ヘッダー</h2><pre class="mail">' . $h($mail['headers']) . '</pre>'
+                . '<h2>本文 (テキスト)</h2><pre class="mail">' . $text . '</pre>'
+                . ($mail['html'] !== null ? '<h2>本文 (HTML のソース)</h2><pre class="mail">' . $h($mail['html']) . '</pre>' : '');
+            $render('受信メール: ' . $m['to_email'], $body);
+        }
+        $list = $db->all('SELECT * FROM local_mailbox ORDER BY id DESC LIMIT 200');
+        $body = '<p class="muted">ローカルモードでは、メールは外に出ずにここに届きます。'
+            . '宛先 bounce@simulator.amazonses.com はバウンス、complaint@simulator.amazonses.com は迷惑メール報告になります (本物の SES のテスト用アドレスと同じ動き)。</p>'
+            . '<form method="post" action="?p=runcron" class="filters">' . $csrfField() . '<input type="hidden" name="back" value="p=mailbox"><button>cron を今すぐ1回実行 (送信・通知処理)</button></form>'
+            . View::table(['受信日時', '種類', '宛先', '件名', 'SESイベント', ''], array_map(static fn($m) => [
+                $m['created_at'], $m['is_campaign'] ? '営業メール' : '管理者への通知', $m['to_email'], $m['subject'],
+                $m['pending_events'] ? '処理待ち (次の cron)' : ($m['is_campaign'] ? '処理済み' : '-'),
+                ['html' => '<a href="?p=mailbox&id=' . (int)$m['id'] . '">開く</a>'],
+            ], $list));
+        $render('テスト受信箱', $body);
+
     // ---------- ダッシュボード ----------
     case 'dashboard':
         $d = $stats->day($today);
@@ -106,6 +172,11 @@ switch ($page) {
         $g = (new AutoPause($app))->stats();
         $missing = TemplateRenderer::missingSenderInfo($app->config);
         $body = '';
+        if (Mailer\Local\LocalMailbox::isLocal($app)) {
+            $body .= '<div class="card"><strong>ローカルモード</strong> — メールは外に出ず「<a href="?p=mailbox">テスト受信箱</a>」に届きます。cron は1分ごとに自動で動きます。'
+                . '<form method="post" action="?p=runcron" class="inline">' . $csrfField() . '<button class="small">今すぐ1回実行</button></form>'
+                . '<p class="muted">注意: 送信時間帯・曜日はキャンペーンの設定どおりに守られます (デモのキャンペーンは毎日0時〜24時)。</p></div>';
+        }
         if ($missing) {
             $body .= '<div class="flash error">法定表示に必要な設定が不足しているため送信できません: ' . $h(implode('、', $missing)) . '</div>';
         }
@@ -174,7 +245,7 @@ switch ($page) {
             $redirect('p=contacts');
         }
         if ($isPost && ($_POST['action'] ?? '') === 'mx') {
-            $r = (new Mailer\MxChecker($db, $app->clock))->checkPending(1000, 20.0);
+            $r = (new Mailer\MxChecker($db, $app->clock, Mailer\Local\LocalMailbox::isLocal($app)))->checkPending(1000, 20.0);
             $addFlash('ok', "MXチェック: {$r['checked']}件確認 / NG {$r['ng']}件 (未確認分は cron でも順次確認します)");
             $redirect('p=contacts');
         }

@@ -53,6 +53,9 @@ final class App
 
     public function ses(): SesClient
     {
+        if ($this->config->get('aws.mode') === 'local') {
+            return $this->ses ??= new Local\LocalSesClient($this);
+        }
         return $this->ses ??= new SesClient(
             (string)$this->config->get('aws.region'),
             (string)$this->config->get('aws.access_key_id'),

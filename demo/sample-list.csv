@@ -1,0 +1,15 @@
+会社名,メールアドレス,担当者名,業種,地域,URL,取得元,取得日,お断り
+株式会社サンプル解体,info@kaitai1.example,,解体工事業,東京都,https://kaitai1.example,https://kaitai1.example/company,2026-10-20,
+有限会社テスト工業,sales@kogyo2.example,山田,解体工事業,神奈川県,https://kogyo2.example,https://kogyo2.example/contact,2026-10-20,
+デモ建設株式会社,info@kensetsu3.example,,石綿除去業,埼玉県,https://kensetsu3.example,https://kensetsu3.example/about,2026-10-21,
+例示環境サービス,eigyo@kankyo4.example,佐藤,産業廃棄物処理業,千葉県,https://kankyo4.example,https://kankyo4.example/,2026-10-21,
+株式会社サンプル解体,yamada@kaitai1.example,山田,解体工事業,東京都,https://kaitai1.example,https://kaitai1.example/staff,2026-10-20,
+重複チェック社,INFO@kensetsu3.example,,石綿除去業,埼玉県,https://kensetsu3.example,https://kensetsu3.example/about,2026-10-21,
+お断り表示あり株式会社,info@kotowari5.example,,解体工事業,東京都,https://kotowari5.example,https://kotowari5.example/company,2026-10-22,あり
+取得元なし株式会社,info@nosource6.example,,解体工事業,大阪府,https://nosource6.example,,,
+書式不正社,info@@broken7.example,,解体工事業,大阪府,,https://broken7.example/,2026-10-22,
+バウンス試験,bounce@simulator.amazonses.com,,テスト,東京都,https://bounce.test,SESシミュレーター,2026-11-01,
+苦情試験,complaint@simulator.amazonses.com,,テスト,東京都,https://complaint.test,SESシミュレーター,2026-11-01,
+株式会社デモ八,info@demo8.example,,解体工事業,愛知県,https://demo8.example,https://demo8.example/company,2026-10-23,
+株式会社デモ九,info@demo9.example,,産業廃棄物処理業,愛知県,https://demo9.example,https://demo9.example/company,2026-10-23,
+株式会社デモ十,info@demo10.example,,石綿除去業,福岡県,https://demo10.example,https://demo10.example/company,2026-10-23,

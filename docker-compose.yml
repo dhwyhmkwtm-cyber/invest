@@ -1,0 +1,30 @@
+# 自宅・ローカル体験用 (AWS・ドメイン不要)。
+#   docker compose up --build
+#   → http://localhost:8080/admin/  (ユーザー admin / パスワード demo-pass-2026)
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: mailer
+      MYSQL_USER: mailer
+      MYSQL_PASSWORD: mailer
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--default-time-zone=+09:00"]
+    volumes:
+      - dbdata:/var/lib/mysql
+  web:
+    build: ./docker
+    depends_on: [db]
+    ports:
+      - "8080:80"
+    environment:
+      MAILER_CONFIG: /var/www/app/config/config.local.php
+      MAILER_PUBLIC_BASE_URL: ${MAILER_PUBLIC_BASE_URL:-http://localhost:8080}
+      MAILER_DB_HOST: db
+      TZ: Asia/Tokyo
+    volumes:
+      - ./public:/var/www/html
+      - ./app:/var/www/app
+volumes:
+  dbdata:

@@ -62,7 +62,8 @@ public/             ← 公開ディレクトリに置く (例: web/mailer/)
 
 ## セットアップ
 
-0. **まずテスト環境で動作確認する**: [docs/staging.md](docs/staging.md) (本番と同じサーバー・SES・DNSで、許可した宛先にだけ送るモード)。`bin/doctor.php` で環境を一括チェックできる
+0. **自宅で試す (AWS・ドメイン不要)**: [docs/local-demo.md](docs/local-demo.md) — `docker compose up --build` で、メールを外に出さない体験版が起動する
+0. **本番と同じ環境で動作確認する**: [docs/staging.md](docs/staging.md) (本番と同じサーバー・SES・DNSで、許可した宛先にだけ送るモード)。`bin/doctor.php` で環境を一括チェックできる
 1. フェーズ1 (AWS・DNS): [docs/setup-aws.md](docs/setup-aws.md)
 2. ロリポップへの配置・cron 登録: [docs/deploy-lolipop.md](docs/deploy-lolipop.md)
 3. フェーズ2 受け入れ確認 (社内50件): [docs/acceptance-phase2.md](docs/acceptance-phase2.md)

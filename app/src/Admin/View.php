@@ -17,6 +17,9 @@ final class View
         if ($user !== null) {
             $items = ['dashboard' => 'ダッシュボード', 'contacts' => '宛先リスト', 'campaigns' => 'キャンペーン',
                 'suppressions' => '抑止リスト', 'replies' => '返信・手動停止', 'queue' => 'キュー確認', 'reports' => 'レポート'];
+            if (function_exists('mailer_app') && mailer_app()->config->get('aws.mode') === 'local') {
+                $items['mailbox'] = 'テスト受信箱';
+            }
             $cur = $_GET['p'] ?? 'dashboard';
             foreach ($items as $k => $label) {
                 $nav .= '<a href="?p=' . $k . '"' . ($cur === $k ? ' class="on"' : '') . '>' . $label . '</a>';
@@ -33,8 +36,10 @@ final class View
         header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; form-action 'self'");
         echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             . '<meta name="robots" content="noindex"><title>' . $h($title) . ' | 配信ツール</title><link rel="stylesheet" href="style.css"></head><body>'
-            . (function_exists('mailer_app') && mailer_app()->config->get('environment', 'staging') !== 'production'
-                ? '<div style="background:#b7791f;color:#fff;text-align:center;padding:4px;font-weight:600">テスト環境 — 許可した宛先 (allowed_recipients) 以外には送信しません</div>' : '')
+            . (function_exists('mailer_app') && mailer_app()->config->get('aws.mode') === 'local'
+                ? '<div style="background:#2f855a;color:#fff;text-align:center;padding:4px;font-weight:600">ローカルモード — メールは外に送信されません (テスト受信箱に届きます)</div>'
+                : (function_exists('mailer_app') && mailer_app()->config->get('environment', 'staging') !== 'production'
+                ? '<div style="background:#b7791f;color:#fff;text-align:center;padding:4px;font-weight:600">テスト環境 — 許可した宛先 (allowed_recipients) 以外には送信しません</div>' : ''))
             . '<header><strong>営業メール配信ツール</strong><nav>' . $nav . '</nav></header><main><h1>' . $h($title) . '</h1>'
             . $flashHtml . $body . '</main></body></html>';
     }

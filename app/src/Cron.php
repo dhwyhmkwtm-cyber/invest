@@ -32,6 +32,10 @@ final class Cron
             $now = $this->app->clock->now();
             $settings->set('cron_last_run', $this->app->clock->nowSql());
             $out = [];
+            $local = Local\LocalMailbox::isLocal($this->app);
+            if ($local) {
+                $out['local_events'] = (new Local\LocalMailbox($this->app))->flush();
+            }
             // 毎朝の判定 (ウォームアップの上限引き上げ) と A/B テストの自動決定は送信の前に行う
             $out['warmup'] = (new Campaign\Warmup($this->app))->runAll();
             foreach ($this->app->db()->all("SELECT id FROM campaigns WHERE status = 'active' AND ab_status = 'testing'") as $c) {
@@ -48,7 +52,7 @@ final class Cron
             }
 
             if (($out['worker']['sent'] ?? 0) === 0) {
-                $out['mx'] = (new MxChecker($this->app->db(), $this->app->clock))->checkPending(300, 15.0);
+                $out['mx'] = (new MxChecker($this->app->db(), $this->app->clock, $local))->checkPending(300, 15.0);
             }
 
             $reportHour = (int)$this->app->config->get('notify.daily_report_hour', 18);

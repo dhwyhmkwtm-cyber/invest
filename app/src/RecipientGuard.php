@@ -21,8 +21,8 @@ final class RecipientGuard
 
     public function allows(string $email): bool
     {
-        if ($this->isProduction()) {
-            return true;
+        if ($this->isProduction() || $this->config->get('aws.mode') === 'local') {
+            return true; // ローカルモードはメールが外に出ないので全宛先を許可
         }
         $email = strtolower($email);
         foreach ((array)$this->config->get('sending.allowed_recipients', []) as $rule) {

@@ -1,0 +1,12 @@
+{
+  "name": "営業メール配信ツール (ローカル体験)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "配信ツール", "onAutoForward": "openBrowser" }
+  },
+  "postStartCommand": "bash docker/codespaces-start.sh"
+}

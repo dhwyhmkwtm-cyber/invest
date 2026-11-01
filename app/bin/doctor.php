@@ -50,7 +50,7 @@ if ($guard->isProduction()) {
 $missing = Mailer\Template\TemplateRenderer::missingSenderInfo($cfg);
 $line($missing ? 'ng' : 'ok', '法定表示の送信者情報', $missing ? '不足: ' . implode('、', $missing) : '');
 $line(strlen((string)$cfg->get('app_secret')) >= 32 ? 'ok' : 'ng', 'app_secret (32文字以上)');
-$line(str_starts_with((string)$cfg->get('public_base_url'), 'https://') ? 'ok' : 'ng', 'public_base_url が https', (string)$cfg->get('public_base_url'));
+$line(str_starts_with((string)$cfg->get('public_base_url'), 'https://') ? 'ok' : ($cfg->get('aws.mode') === 'local' ? 'warn' : 'ng'), 'public_base_url が https', (string)$cfg->get('public_base_url'));
 $line((array)$cfg->get('admin.allowed_ips', []) ? 'ok' : 'warn', '管理画面のIP制限', (array)$cfg->get('admin.allowed_ips', []) ? implode(', ', (array)$cfg->get('admin.allowed_ips')) : '未設定 (誰でもログイン画面を開ける)');
 $line((array)$cfg->get('notify.admin_emails', []) ? 'ok' : 'warn', '異常通知の送り先', implode(', ', (array)$cfg->get('notify.admin_emails', [])));
 $ph = (float)$cfg->get('sending.per_second', 5);
@@ -84,6 +84,11 @@ $line(is_writable($var) ? 'ok' : 'ng', 'ログ・ロック用ディレクトリ�
 $docRoot = realpath(MAILER_ROOT);
 $line(!preg_match('#/web(/|$)#', (string)$docRoot) ? 'ok' : 'warn', 'app/ が公開ディレクトリ (web/) の外にある', (string)$docRoot);
 
+if ($cfg->get('aws.mode') === 'local') {
+    $section('AWS・DNS');
+    $line('ok', 'ローカルモード', 'メールは外に出ずテスト受信箱に届く。SES・DNS の確認は省略');
+    goto summary;
+}
 if ($noNet) {
     goto summary;
 }
