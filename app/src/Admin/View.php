@@ -33,6 +33,8 @@ final class View
         header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; form-action 'self'");
         echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             . '<meta name="robots" content="noindex"><title>' . $h($title) . ' | 配信ツール</title><link rel="stylesheet" href="style.css"></head><body>'
+            . (function_exists('mailer_app') && mailer_app()->config->get('environment', 'staging') !== 'production'
+                ? '<div style="background:#b7791f;color:#fff;text-align:center;padding:4px;font-weight:600">テスト環境 — 許可した宛先 (allowed_recipients) 以外には送信しません</div>' : '')
             . '<header><strong>営業メール配信ツール</strong><nav>' . $nav . '</nav></header><main><h1>' . $h($title) . '</h1>'
             . $flashHtml . $body . '</main></body></html>';
     }

@@ -57,6 +57,12 @@ class SesClient
         return $this->call('GET', '/v2/email/account', null);
     }
 
+    /** @return array<string,mixed> 送信用ID (ドメイン) の認証状態 */
+    public function getEmailIdentity(string $identity): array
+    {
+        return $this->call('GET', '/v2/email/identities/' . rawurlencode($identity), null);
+    }
+
     /** @return array<string,mixed> */
     private function call(string $method, string $path, ?array $payload): array
     {

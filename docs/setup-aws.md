@@ -53,6 +53,8 @@ IAM → ユーザー作成 (コンソールアクセスなし) → 次のイン�
 }
 ```
 
+- 環境チェック (`bin/doctor.php`) で SES の状態を見たい場合は、読み取り専用の権限を別の Statement で追加する:
+  `{"Effect": "Allow", "Action": ["ses:GetAccount", "ses:GetEmailIdentity"], "Resource": "*"}`
 - サンドボックス中は宛先も認証済み ID である必要があり、その ID も Resource に追加しないと拒否される (本番化後は不要)
 - アクセスキーは `app/config/config.php` (公開ディレクトリ外) にだけ書く
 

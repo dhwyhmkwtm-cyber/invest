@@ -9,6 +9,9 @@ if (PHP_SAPI !== 'cli') {
 $to = Mailer\Util\Email::normalize($argv[1] ?? '') ?? exit("usage: php test_send.php TO_ADDRESS\n");
 $app = mailer_app();
 $cfg = $app->config;
+if (!(new Mailer\RecipientGuard($cfg))->allows($to)) {
+    exit("テスト環境のため送信しません: {$to} は sending.allowed_recipients にありません\n");
+}
 $r = new Mailer\Template\TemplateRenderer($cfg);
 $unsub = rtrim((string)$cfg->get('public_base_url'), '/') . '/u.php?test=1';
 $c = $r->render(['subject' => 'テスト送信 (配信ツール)', 'body_text' => "{{会社名|テスト}} 様\n\nこれは送信基盤のテストです。", 'body_html' => null], [], $unsub);

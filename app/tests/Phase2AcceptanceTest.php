@@ -270,4 +270,22 @@ return [
         worker($app);
         eq(5, count($t->sends()));
     },
+    'テストモード: 許可した宛先以外には送らない (許可リストが空なら一切送らない)' => function () {
+        [$app, $t] = fresh_app(['environment' => 'staging', 'sending.allowed_recipients' => ['@co1.example.jp', 'info@co3.example.jp']]);
+        seed_contacts($app, 4);
+        $cid = seed_campaign($app);
+        (new Enqueuer($app->db(), $app->clock, $app->config))->enqueueInitial($cid);
+        worker($app);
+        $to = array_map([FakeTransport::class, 'recipient'], $t->sends());
+        sort($to);
+        eq(['info@co1.example.jp', 'info@co3.example.jp'], $to);
+        eq('2', (string)$app->db()->value("SELECT COUNT(*) FROM send_queue WHERE status = 'cancelled' AND last_error LIKE 'blocked by test mode%'"));
+
+        [$app, $t] = fresh_app(['environment' => 'staging', 'sending.allowed_recipients' => []]);
+        seed_contacts($app, 2);
+        $cid = seed_campaign($app);
+        (new Enqueuer($app->db(), $app->clock, $app->config))->enqueueInitial($cid);
+        worker($app);
+        eq(0, count($t->sends()));
+    },
 ];

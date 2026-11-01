@@ -186,6 +186,12 @@ final class Worker
         $clock = $app->clock;
         $requireMx = (bool)$cfg->get('sending.require_mx_ok', true);
 
+        // テスト環境では許可した宛先以外に送らない
+        if (!(new \Mailer\RecipientGuard($cfg))->allows((string)$row['email'])) {
+            $this->finish($row, 'cancelled', null, 'blocked by test mode (not in allowed_recipients)');
+            $this->log($row, 'skipped', null, 'test mode');
+            return 'skipped';
+        }
         // 送信直前の再確認 (抑止リスト・お断り表示・取得元)
         $eligible = $db->value(
             'SELECT 1 FROM contacts c WHERE c.id = ? AND ' . Enqueuer::eligibilitySql($requireMx),

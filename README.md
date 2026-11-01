@@ -24,6 +24,7 @@ app/                ← 公開ディレクトリの外に置く (ロリポップ
   bin/test_send.php          フェーズ1のテスト送信
   bin/check_mx.php           MXチェックの一括実行
   bin/purge.php              個人情報・ログの削除手順
+  bin/doctor.php             環境チェック (これが全部OKなら本番でも動く)
   tests/                     テスト (php tests/run.php)
 public/             ← 公開ディレクトリに置く (例: web/mailer/)
   u.php                      配信停止ページ + RFC 8058 ワンクリック停止
@@ -61,6 +62,7 @@ public/             ← 公開ディレクトリに置く (例: web/mailer/)
 
 ## セットアップ
 
+0. **まずテスト環境で動作確認する**: [docs/staging.md](docs/staging.md) (本番と同じサーバー・SES・DNSで、許可した宛先にだけ送るモード)。`bin/doctor.php` で環境を一括チェックできる
 1. フェーズ1 (AWS・DNS): [docs/setup-aws.md](docs/setup-aws.md)
 2. ロリポップへの配置・cron 登録: [docs/deploy-lolipop.md](docs/deploy-lolipop.md)
 3. フェーズ2 受け入れ確認 (社内50件): [docs/acceptance-phase2.md](docs/acceptance-phase2.md)

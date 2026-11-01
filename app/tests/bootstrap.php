@@ -61,6 +61,7 @@ final class FakeTransport implements Transport
 function test_config(array $override = []): Config
 {
     $cfg = [
+        'environment' => 'production',
         'timezone' => 'Asia/Tokyo',
         'db' => [
             'dsn' => getenv('MAILER_TEST_DSN') ?: 'mysql:host=127.0.0.1;dbname=mailer_test;charset=utf8mb4',

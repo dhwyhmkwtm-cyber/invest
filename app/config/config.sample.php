@@ -5,6 +5,10 @@
 // config.php は git にコミットしない (.gitignore 済み)。
 // ============================================================
 return [
+    // 'staging' (テスト環境) / 'production' (本番)。
+    // staging では sending.allowed_recipients に一致する宛先にしか送らない (一致しない宛先は取消)。
+    'environment' => 'staging',
+
     'timezone' => 'Asia/Tokyo',
 
     'db' => [
@@ -50,6 +54,8 @@ return [
 
     // 送信速度・上限 (全キャンペーン合計)。キャンペーンごとの1日上限は管理画面で設定。
     'sending' => [
+        // テスト環境で送ってよい宛先 ('@ドメイン' でドメイン全体、またはアドレス)。空なら一切送らない。
+        'allowed_recipients' => ['@example.co.jp', '@simulator.amazonses.com'],
         'per_second'        => 5,     // SESの送信レート以下にする
         'hourly_limit'      => 600,
         'daily_limit'       => 3000,

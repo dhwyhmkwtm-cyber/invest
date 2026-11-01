@@ -30,6 +30,7 @@ final class Cron
         try {
             $settings = $this->app->settings();
             $now = $this->app->clock->now();
+            $settings->set('cron_last_run', $this->app->clock->nowSql());
             $out = ['worker' => (new Worker($this->app))->run()];
 
             $lastFollow = $settings->get('cron_last_followup');
