@@ -1,14 +1,14 @@
 # 営業メール配信ツール
 
 要件定義書 (2026-11-01) に基づく、Amazon SES + ロリポップ (PHP 8 / MySQL) の営業メール配信ツール。
-現在の実装範囲は **フェーズ2 (F2・F4・F6・F7)** と、送信に必須となる F3 の一部 (テンプレート・差し込み・法定表示の自動挿入・偽装件名の禁止)。
+現在の実装範囲は **フェーズ2・3 (F2〜F7)**。収集エージェント (F1) は未着手。
 
 | フェーズ | 内容 | 状態 |
 |---|---|---|
-| 1 | SES・DNS (SPF/DKIM/DMARC) の準備 | 手順書: [docs/setup-aws.md](docs/setup-aws.md)、確認用 `bin/test_send.php` |
-| 2 | リスト取り込み・抑止リスト・キュー・cron送信・SES通知・配信停止・管理画面 | **実装済み** (受け入れ基準のテストあり) |
-| 3 | A/Bの勝ちパターン自動選択・ウォームアップ自動引き上げ (F5) | 未着手。A/Bの均等割り当てと成績表示、テンプレートの法定表示強制は実装済み |
-| 4 | 収集エージェント (F1) | 未着手。結果CSVは現在の取り込み画面で読み込める |
+| 1 | SES・DNS (SPF/DKIM/DMARC) の準備 | 手順書: [docs/setup-aws.md](docs/setup-aws.md)、確認ツール `bin/doctor.php`・`bin/test_send.php` |
+| 2 | リスト取り込み・抑止リスト・キュー・cron送信・SES通知・配信停止・管理画面 | **実装済み** ([受け入れ確認](docs/acceptance-phase2.md)) |
+| 3 | テンプレート・法定表示の強制・A/Bテストの自動決定・ウォームアップの自動引き上げ (F3・F5) | **実装済み** ([受け入れ確認](docs/acceptance-phase3.md)、[文面作成の手順書](docs/copywriting-guide.md)) |
+| 4 | 収集エージェント (F1) | 未着手。収集結果のCSVは現在の取り込み画面で読み込める |
 
 ## 構成
 
@@ -19,7 +19,7 @@ app/                ← 公開ディレクトリの外に置く (ロリポップ
   sql/schema.sql             テーブル定義 (主要7テーブル + 設定・管理者・ログ)
   src/                       本体 (外部ライブラリ不要)
   bin/cron.php               cron に1本だけ登録する定期処理
-  bin/migrate.php            テーブル作成
+  bin/migrate.php            テーブル作成・更新 (何度実行しても安全)
   bin/create_admin.php       管理者の作成
   bin/test_send.php          フェーズ1のテスト送信
   bin/check_mx.php           MXチェックの一括実行

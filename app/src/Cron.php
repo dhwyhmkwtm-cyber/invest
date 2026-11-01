@@ -31,7 +31,15 @@ final class Cron
             $settings = $this->app->settings();
             $now = $this->app->clock->now();
             $settings->set('cron_last_run', $this->app->clock->nowSql());
-            $out = ['worker' => (new Worker($this->app))->run()];
+            $out = [];
+            // 毎朝の判定 (ウォームアップの上限引き上げ) と A/B テストの自動決定は送信の前に行う
+            $out['warmup'] = (new Campaign\Warmup($this->app))->runAll();
+            foreach ($this->app->db()->all("SELECT id FROM campaigns WHERE status = 'active' AND ab_status = 'testing'") as $c) {
+                if (($w = (new Campaign\AbTest($this->app))->maybeDecide((int)$c['id'])) !== null) {
+                    $out['ab_decided'][(int)$c['id']] = $w;
+                }
+            }
+            $out['worker'] = (new Worker($this->app))->run();
 
             $lastFollow = $settings->get('cron_last_followup');
             if ($lastFollow === null || strtotime($lastFollow) < $now->getTimestamp() - 3600) {

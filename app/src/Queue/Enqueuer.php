@@ -63,7 +63,7 @@ final class Enqueuer
             $params[] = $filters['origin'];
         }
         $rows = $this->db->all(
-            'SELECT c.id, c.email, c.email_domain, c.company_id FROM contacts c JOIN companies co ON co.id = c.company_id
+            'SELECT c.id, c.email, c.email_domain, c.company_id, c.origin FROM contacts c JOIN companies co ON co.id = c.company_id
               WHERE ' . implode(' AND ', $where) . ' ORDER BY c.id',
             $params
         );
@@ -84,7 +84,10 @@ final class Enqueuer
             shuffle($picked);
             $picked = array_slice($picked, 0, $limit);
         }
-        $ordered = self::spreadByDomain($picked);
+        // 自社収集の宛先 (取得元が確かで反応が期待できる) を先に送る (ウォームアップ段階1〜2向け)
+        $own = array_values(array_filter($picked, static fn($r) => $r['origin'] === 'own'));
+        $others = array_values(array_filter($picked, static fn($r) => $r['origin'] !== 'own'));
+        $ordered = array_merge(self::spreadByDomain($own), self::spreadByDomain($others));
         $queued = $this->insertRows($campaignId, 1, $templates, $ordered);
         return ['queued' => $queued, 'candidates' => count($picked)];
     }

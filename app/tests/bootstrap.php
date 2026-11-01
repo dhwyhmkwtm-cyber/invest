@@ -102,10 +102,7 @@ function fresh_app(array $override = [], string $now = '2026-11-04 10:00:00'): a
     foreach ($db->all('SHOW TABLES') as $row) {
         $db->pdo->exec('DROP TABLE `' . array_values($row)[0] . '`');
     }
-    $sql = preg_replace('/^--.*$/m', '', file_get_contents(MAILER_ROOT . '/sql/schema.sql'));
-    foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-        $db->pdo->exec($stmt);
-    }
+    (new Mailer\Migrator($db, $clock))->migrate();
     $app->setDb($db);
     $t = new FakeTransport();
     $app->setTransport($t);

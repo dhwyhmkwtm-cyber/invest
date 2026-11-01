@@ -339,11 +339,18 @@ switch ($page) {
                     if (!preg_match('/^\d{2}:\d{2}$/', $start) || !preg_match('/^\d{2}:\d{2}$/', $end) || $start >= $end) {
                         throw new RuntimeException('送信時間帯が不正です');
                     }
-                    $limit = max(0, min(50000, (int)($_POST['daily_limit'] ?? 200)));
+                    $warmup = !empty($_POST['warmup_enabled']) ? 1 : 0;
+                    $warm = new Mailer\Campaign\Warmup($app);
+                    $step = max(0, min(count($warm->plan()) - 1, (int)($_POST['warmup_step'] ?? $c['warmup_step'])));
+                    // ウォームアップ中は上限を計画どおりに自動設定する (手入力は無視)
+                    $limit = $warmup ? $warm->limitFor($step) : max(0, min(50000, (int)($_POST['daily_limit'] ?? 200)));
+                    $stepChanged = $step !== (int)$c['warmup_step'];
                     $db->run('UPDATE campaigns SET name = ?, start_date = ?, daily_limit = ?, send_window_start = ?, send_window_end = ?, send_days = ?,
-                              followup_enabled = ?, followup_days = ?, updated_at = ? WHERE id = ?', [
+                              followup_enabled = ?, followup_days = ?, warmup_enabled = ?, warmup_step = ?,
+                              warmup_days_at_step = IF(?, 0, warmup_days_at_step), ab_min_per_variant = ?, updated_at = ? WHERE id = ?', [
                         trim((string)$_POST['name']) ?: $c['name'], ($_POST['start_date'] ?? '') ?: null, $limit, $start . ':00', $end . ':00',
-                        implode(',', $days ?: [1, 2, 3, 4, 5]), !empty($_POST['followup_enabled']) ? 1 : 0, max(7, (int)($_POST['followup_days'] ?? 7)), $now, $id,
+                        implode(',', $days ?: [1, 2, 3, 4, 5]), !empty($_POST['followup_enabled']) ? 1 : 0, max(7, (int)($_POST['followup_days'] ?? 7)),
+                        $warmup, $step, $stepChanged ? 1 : 0, max(50, (int)($_POST['ab_min_per_variant'] ?? 200)), $now, $id,
                     ]);
                     $auth->audit('campaign_save', ['id' => $id, 'daily_limit' => $limit]);
                     $addFlash('ok', '保存しました');
@@ -365,7 +372,19 @@ switch ($page) {
                     ]);
                     $auth->audit('enqueue', ['id' => $id] + $r);
                     $addFlash('ok', "キューに {$r['queued']}件 追加しました (対象 {$r['candidates']}社)。配信中にすると cron が順次送信します。");
+                } elseif ($action === 'ab_decide') {
+                    (new Mailer\Campaign\AbTest($app))->decide($id, (int)($_POST['template_id'] ?? 0), '管理者が決定 (' . $auth->user() . ')');
+                    $auth->audit('ab_decide', ['id' => $id, 'template' => (int)$_POST['template_id']]);
+                    $addFlash('ok', 'A/Bテストの勝ちパターンを決定しました。未送信キューはこのパターンで送ります。');
+                } elseif ($action === 'ab_status') {
+                    $to = ($_POST['to'] ?? '') === 'off' ? 'off' : 'testing';
+                    $db->run('UPDATE campaigns SET ab_status = ?, ab_winner_id = NULL, updated_at = ? WHERE id = ?', [$to, $now, $id]);
+                    $auth->audit('ab_status', ['id' => $id, 'to' => $to]);
+                    $addFlash('ok', $to === 'off' ? 'A/Bの自動決定を止めました (有効なパターンを均等に送り続けます)' : 'A/Bテストを再開しました');
                 } elseif ($action === 'cancel_queue') {
+                    if (empty($_POST['confirm'])) {
+                        throw new RuntimeException('「本当に取り消す」にチェックを入れてください');
+                    }
                     $n = $db->run("UPDATE send_queue SET status = 'cancelled', last_error = 'cancelled by admin', updated_at = ? WHERE campaign_id = ? AND status IN ('queued', 'retry')", [$now, $id])->rowCount();
                     $auth->audit('cancel_queue', ['id' => $id, 'n' => $n]);
                     $addFlash('ok', "未送信 {$n}件を取り消しました");
@@ -393,15 +412,66 @@ switch ($page) {
             View::pct($t['sent'] ? $t['replied'] / $t['sent'] : 0), (int)$t['bounced'], (int)$t['complained'], (int)$t['unsubscribed'],
             ['html' => '<a href="?p=template&id=' . (int)$t['id'] . '">編集</a>'],
         ], $stats->variants($id));
+        // ウォームアップ
+        $warm = new Mailer\Campaign\Warmup($app);
+        $plan = $warm->plan();
+        $stepOptions = [];
+        foreach ($plan as $i => [$pd, $pl]) {
+            $stepOptions[$i] = '段階' . ($i + 1) . ': 1日 ' . number_format($pl) . '件' . ($pd ? " ({$pd}営業日)" : ' (以降ずっと)');
+        }
+        $wlog = $db->all('SELECT * FROM warmup_log WHERE campaign_id = ? ORDER BY eval_date DESC LIMIT 30', [$id]);
+        $resultLabels = ['start' => '開始', 'advance' => '引き上げ', 'stay' => '継続', 'hold' => '据え置き', 'low_volume' => '件数不足', 'pause' => '停止'];
+        $cur = min((int)$c['warmup_step'], count($plan) - 1);
+        $warmupHtml = '<h2>ウォームアップ</h2>'
+            . ($c['warmup_enabled']
+                ? '<p>現在: <strong>段階' . ($cur + 1) . ' (1日 ' . number_format($plan[$cur][1]) . '件)</strong>'
+                    . ($plan[$cur][0] ? ' — この段階の ' . (int)$c['warmup_days_at_step'] . ' / ' . $plan[$cur][0] . ' 営業日を完了' : ' — 最終段階')
+                    . ((int)$c['warmup_bad_days'] ? ' <span class="bad">閾値超過 ' . (int)$c['warmup_bad_days'] . '日目 (2日続くと停止)</span>' : '') . '</p>'
+                    . '<p class="muted">毎朝、前回の送信日のバウンス率 ' . View::pct((float)$app->config->get('warmup.max_bounce_rate', 0.02), 0)
+                    . ' 未満・苦情率 ' . View::pct((float)$app->config->get('warmup.max_complaint_rate', 0.001), 1) . ' 未満なら日数を進めます。</p>'
+                : '<p class="muted">ウォームアップは無効です (1日の上限は手動設定)。</p>')
+            . View::table(['判定日', '対象の送信日', '送信', 'バウンス', '苦情', '結果', '上限', 'メモ'], array_map(static fn($w) => [
+                $w['eval_date'], $w['target_date'], $w['sent'], $w['bounces'], $w['complaints'], $resultLabels[$w['result']] ?? $w['result'], number_format((int)$w['limit_after']), $w['note'],
+            ], $wlog));
+        // A/B
+        $abRows = (new Mailer\Campaign\AbTest($app))->scores($id, false);
+        $abStatusLabel = ['testing' => 'テスト中', 'decided' => '決定済み', 'off' => '自動決定しない'][$c['ab_status']] ?? $c['ab_status'];
+        $abHtml = '<div class="card"><h2>A/Bテスト (初回メール): ' . $h($abStatusLabel) . '</h2>';
+        if ($c['ab_status'] === 'testing') {
+            $abHtml .= '<p class="muted">各パターン ' . (int)$c['ab_min_per_variant'] . '件 (24時間以上前の送信) に達するか、ウォームアップが段階3に入ったら自動で決定します。'
+                . '点数 = (返信×10 + クリック×3 + 開封×1 − 停止×5 − 苦情×50) ÷ 送信数</p>';
+        }
+        if (count($abRows) >= 2) {
+            $abHtml .= View::table(['パターン', '件名', '送信', '点数', ''], array_map(static fn($r) => [
+                $r['variant'], $r['subject'], (int)$r['sent'], number_format((float)$r['score'], 3),
+                ['html' => $c['ab_status'] !== 'decided'
+                    ? '<form method="post" class="inline">' . $csrfField() . '<input type="hidden" name="action" value="ab_decide"><input type="hidden" name="template_id" value="' . (int)$r['id'] . '"><button class="small">これに決定</button></form>'
+                    : ''],
+            ], $abRows));
+        } elseif ($c['ab_status'] === 'decided') {
+            $abHtml .= '<p>決定したパターン: ' . $h($db->value('SELECT CONCAT(variant, \' / \', subject) FROM templates WHERE id = ?', [$c['ab_winner_id']])) . '</p>';
+        } else {
+            $abHtml .= '<p class="muted">有効な初回パターンが1つだけです。比較するには2〜3パターン登録してください。</p>';
+        }
+        $abHtml .= '<form method="post" class="inline">' . $csrfField() . '<input type="hidden" name="action" value="ab_status">'
+            . ($c['ab_status'] === 'testing'
+                ? '<input type="hidden" name="to" value="off"><button class="secondary small">自動決定しない</button>'
+                : '<input type="hidden" name="to" value="testing"><button class="secondary small">A/Bテストをやり直す</button>')
+            . '</form></div>';
+
         $body = '<p>状態: <strong>' . $h($campaignStatus[$c['status']] ?? $c['status']) . '</strong> ' . $statusButtons . '</p>'
             . '<div class="tiles">' . tile('未送信', $q['queued']) . tile('再送待ち', $q['retry']) . tile('送信済', $q['sent'])
             . tile('失敗', $q['failed']) . tile('取消', $q['cancelled']) . tile('結果不明', $q['unknown'], $q['unknown'] ? 'warn' : '') . '</div>'
             . '<h2>テンプレート (A/Bパターン)</h2>' . View::table(['種類', 'パターン', '件名', '送信', '開封率', 'クリック率', '返信率', 'バウンス', '苦情', '停止', ''], $tplRows)
+            . $abHtml
             . '<p><a class="btn" href="?p=template&campaign_id=' . $id . '">＋ テンプレートを追加</a></p>'
             . '<div class="grid2"><form method="post" class="card">' . $csrfField() . '<h2>設定</h2><input type="hidden" name="action" value="save">'
             . '<label>名称<input name="name" value="' . $h($c['name']) . '"></label>'
             . '<label>開始日<input type="date" name="start_date" value="' . $h($c['start_date']) . '"></label>'
-            . '<label>1日の上限 (ウォームアップ計画に合わせる)<input type="number" name="daily_limit" min="0" value="' . (int)$c['daily_limit'] . '"></label>'
+            . '<label class="inline"><input type="checkbox" name="warmup_enabled" value="1"' . ($c['warmup_enabled'] ? ' checked' : '') . '> ウォームアップ計画で上限を自動で引き上げる (推奨)</label>'
+            . '<label>ウォームアップの段階<select name="warmup_step">' . View::options($stepOptions, (string)$c['warmup_step']) . '</select></label>'
+            . '<label>1日の上限 (ウォームアップ中は段階の値が自動で入る)<input type="number" name="daily_limit" min="0" value="' . (int)$c['daily_limit'] . '"' . ($c['warmup_enabled'] ? ' readonly' : '') . '></label>'
+            . '<label>A/Bテスト: 各パターンこの件数を送ったら自動で決定<input type="number" name="ab_min_per_variant" min="50" value="' . (int)$c['ab_min_per_variant'] . '"></label>'
             . '<label>送信時間帯<span class="row"><input type="time" name="send_window_start" value="' . substr($c['send_window_start'], 0, 5) . '"> 〜 <input type="time" name="send_window_end" value="' . substr($c['send_window_end'], 0, 5) . '"></span></label>'
             . '<div>送信曜日 ' . $dayBoxes . '</div>'
             . '<label class="inline"><input type="checkbox" name="followup_enabled" value="1"' . ($c['followup_enabled'] ? ' checked' : '') . '> 追いメールを送る (反応がない宛先に1通だけ)</label>'
@@ -413,7 +483,9 @@ switch ($page) {
             . '<label>業種<input name="industry" placeholder="空欄ならすべて"></label><label>地域<input name="region" placeholder="空欄ならすべて"></label>'
             . '<label>タグ<input name="tag" placeholder="空欄ならすべて"></label><label>最大件数 (0 = 制限なし)<input type="number" name="limit" value="0" min="0"></label>'
             . '<button>キューに追加</button></form></div>'
-            . '<form method="post" onsubmit="return confirm(\'未送信のキューをすべて取り消しますか？\')">' . $csrfField() . '<input type="hidden" name="action" value="cancel_queue"><button class="danger">未送信キューをすべて取り消す</button></form>'
+            . '<form method="post" class="card">' . $csrfField() . '<input type="hidden" name="action" value="cancel_queue">'
+            . '<label class="inline"><input type="checkbox" name="confirm" value="1" required> 本当に取り消す</label><button class="danger">未送信キューをすべて取り消す</button></form>'
+            . $warmupHtml
             . '<h2>日次 (直近14日)</h2>' . dayTable($stats->days($today, 14, $id));
         $render('キャンペーン: ' . $c['name'], $body);
 
