@@ -212,5 +212,23 @@
 		<key>shortcut</key>
 		<string>んわ</string>
 	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>大変申し訳ございません。お届けの途中で、汁物の一部がこぼれてしまいました。商品は玄関先に置きましたので、ご確認をお願いいたします。お手数ですが、返金などについてはアプリのヘルプからご連絡いただけますでしょうか。ご迷惑をおかけし、誠に申し訳ございませんでした。</string>
+		<key>shortcut</key>
+		<string>んこ</string>
+	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>大変申し訳ございません。お届けの途中で、商品の一部が崩れて（破損して）しまいました。商品は玄関先に置きましたので、ご確認をお願いいたします。お手数ですが、返金などについてはアプリのヘルプからご連絡いただけますでしょうか。ご迷惑をおかけし、誠に申し訳ございませんでした。</string>
+		<key>shortcut</key>
+		<string>んは</string>
+	</dict>
+	<dict>
+		<key>phrase</key>
+		<string>雨で玄関前の床が濡れていたため、濡れていない場所に商品を置かせていただきました。置いた場所の写真をアプリに添付しておりますので、ご確認ください。このたびはご注文ありがとうございました。</string>
+		<key>shortcut</key>
+		<string>んあ</string>
+	</dict>
 </array>
 </plist>
