@@ -244,6 +244,17 @@ switch ($page) {
             }
             $redirect('p=contacts');
         }
+        if ($isPost && ($_POST['action'] ?? '') === 'import_sample' && Mailer\Local\LocalMailbox::isLocal($app)) {
+            // ローカル体験版のみ: 同梱のサンプルリストを取り込む (iPad 等でファイルを用意しなくて済むように)
+            $r = (new ContactImporter($db, $app->clock, $app->suppressions()))->import(SpreadsheetReader::readCsv(MAILER_ROOT . '/demo/sample-list.csv'), 'own');
+            $auth->audit('import_sample', array_diff_key($r, ['errors' => 1]));
+            $addFlash('ok', sprintf("サンプルリストを取り込みました (バッチ %s)\n新規 %d件 / 統合 %d件 / 書式不正で除外 %d件 / 取得元なし(送信対象外) %d件 / お断り表示 %d件",
+                $r['batch'], $r['inserted'], $r['merged'], $r['invalid'], $r['missing_source'], $r['no_ad']));
+            if ($r['errors']) {
+                $addFlash('warn', implode("\n", $r['errors']));
+            }
+            $redirect('p=contacts');
+        }
         if ($isPost && ($_POST['action'] ?? '') === 'mx') {
             $r = (new Mailer\MxChecker($db, $app->clock, Mailer\Local\LocalMailbox::isLocal($app)))->checkPending(1000, 20.0);
             $addFlash('ok', "MXチェック: {$r['checked']}件確認 / NG {$r['ng']}件 (未確認分は cron でも順次確認します)");
@@ -294,6 +305,11 @@ switch ($page) {
             . '<form method="post" class="card">' . $csrfField() . '<h2>アドレス有効性チェック</h2><input type="hidden" name="action" value="mx">'
             . '<p class="muted">未確認 ' . number_format((int)$db->value("SELECT COUNT(*) FROM contacts WHERE mx_status = 'unchecked'"))
             . '件。ドメインのMXレコードを確認します (20秒で区切って実行)。</p><button>未確認分をチェック</button></form></div>'
+            . (Mailer\Local\LocalMailbox::isLocal($app)
+                ? '<form method="post" class="card">' . $csrfField() . '<input type="hidden" name="action" value="import_sample">'
+                    . '<strong>体験版：サンプルリスト</strong> <span class="muted">架空の14社 (重複・書式不正・取得元なし・お断り表示・バウンス/苦情の試験アドレスを含む)</span> '
+                    . '<button>サンプルを取り込む</button></form>'
+                : '')
             . '<form method="get" class="filters"><input type="hidden" name="p" value="contacts">'
             . '<input name="q" placeholder="アドレス・会社名" value="' . $h($fq) . '">'
             . '<select name="status"><option value="">状態: すべて</option>' . View::options(ContactStatus::LABELS, $_GET['status'] ?? '') . '</select>'
