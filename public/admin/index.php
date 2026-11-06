@@ -146,7 +146,7 @@ switch ($page) {
             }
             $text = $h($mail['text']);
             // 本文中のURLはリンクにする (配信停止URLはローカルの配信停止ページを開く)
-            $text = preg_replace('#(https?://[^\s<]+)#', '<a href="$1" target="_blank" rel="noopener">$1</a>', $text) ?? $text;
+            $text = preg_replace('#(https?://[^\s<]+|/\./u\.php[^\s<]*)#', '<a href="$1" target="_blank" rel="noopener">$1</a>', $text) ?? $text;
             $body = '<p><a href="?p=mailbox">← テスト受信箱</a></p>'
                 . '<div class="card"><p>' . $buttons . '</p><p class="muted">ボタンを押すと、本物の SES から届くのと同じ形の通知が発生し、抑止リスト・レポート・自動停止に反映されます。</p></div>'
                 . '<h2>ヘッダー</h2><pre class="mail">' . $h($mail['headers']) . '</pre>'
